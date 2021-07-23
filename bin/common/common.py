@@ -12,3 +12,5 @@ color_green = (0, 255, 0)
 color_light_gray = (224, 224, 224)
 color_white = (255, 255, 255)
 
+port = 55555
+
