@@ -2,7 +2,7 @@ width_of_line = 6
 width_of_button = 150
 
 window_size_x = 450 + width_of_line * 2
-window_size_y = 450 + width_of_line * 2 + width_of_button
+window_size_y = 450 + width_of_line * 2
 
 
 color_black = (0, 0, 0)
@@ -12,5 +12,5 @@ color_green = (0, 255, 0)
 color_light_gray = (224, 224, 224)
 color_white = (255, 255, 255)
 
-port = 5555
+port = 6666
 

@@ -4,9 +4,9 @@ import sys
 import socket
 from threading import Thread
 
-import common.common as common
+import bin.common.common as common
 import bin.classes.buttonClass as button
-import classes.textInputClass as textInput
+import bin.classes.textInputClass as textInput
 
 
 def FillWindow(game_display):
@@ -199,8 +199,12 @@ def socket_accept(server_socket, connection_and_client_address_list, create_new_
     print("Connection accept successfully")
 
 
-def ReceiveData(from_who, received_data):
+def ReceiveDataInt(from_who, received_data):
     received_data[0] = int(from_who.recv(1024).decode())
+
+
+def ReceiveDataString(from_who, received_data):
+    received_data[0] = str(from_who.recv(1024).decode())
 
 
 def main():
@@ -210,7 +214,7 @@ def main():
     # Setup the window
     pygame.display.set_caption("Tic Tac Toe")
     game_display = pygame.display.set_mode((common.window_size_x, common.window_size_y))
-    logo_image = pygame.image.load("../resources/logo.png")
+    logo_image = pygame.image.load("resources/logo.png")
     pygame.display.set_icon(logo_image)
     fps_clock = pygame.time.Clock()
 
@@ -237,10 +241,11 @@ def main():
     is_server_turn = True
     # connection = None
     is_first_time = True
-    connection_and_client_address_list = [None, None]   # 0 - connection, 1 - client address
+    connection_and_client_address_list = [None, None]  # 0 - connection, 1 - client address
     received_data = [None]  # Stores data from threads
     is_data_receiving = False
     receive_thread = True
+    wait_for_another_player_click = False
 
     text_input = textInput.TextInput(font_size=20)
     my_font = pygame.font.SysFont('Comic Sans MS', 15)
@@ -319,7 +324,8 @@ def main():
                 server_socket.bind(('127.0.0.1', common.port))
                 server_socket.listen(1)
                 # Use threading to connect
-                thread = Thread(target=socket_accept, args=(server_socket, connection_and_client_address_list, create_new_server_window))
+                thread = Thread(target=socket_accept,
+                                args=(server_socket, connection_and_client_address_list, create_new_server_window))
                 thread.start()
 
                 is_server_created = True
@@ -360,35 +366,31 @@ def main():
                             is_end
                         )
 
-                        is_server_turn = False
+                        if is_end[0] == 1:
+                            is_server_turn = False
                     # The end of the game (click on screen and game start again)
                     elif my_event.type == pygame.MOUSEBUTTONDOWN and is_end[0] == 2:
-                        # Fill the window with patterns
-                        FillWindow(game_display)
+                        # noinspection PyUnresolvedReferences
+                        connection_and_client_address_list[0].sendall(b'waiting for client')
 
-                        # Init variables
-                        state_table = [None for _ in range(9)]  # cross / zero
-                        # rectangle_number = None
-                        who_is_next = ["cross"]  # cross / zero
-                        is_end = [1]  # 1 - not the end, 2 - the end
+                        wait_thread = Thread(target=ReceiveDataString,
+                                             args=(connection_and_client_address_list[0], received_data))
+                        wait_thread.start()
 
-                        is_server_turn = False
+                        wait_for_another_player_click = True
+                        game_window_server = False
 
-                        pygame.display.update()
-
-                    # Proper exit
-                    if my_event.type == QUIT:
-                        pygame.quit()
-                        sys.exit()
+                        # Break event loop
+                        break
 
             else:
                 if not is_data_receiving:
-                    receive_thread = Thread(target=ReceiveData, args=(connection_and_client_address_list[0], received_data))
+                    receive_thread = Thread(target=ReceiveDataInt,
+                                            args=(connection_and_client_address_list[0], received_data))
                     receive_thread.start()
 
                     is_data_receiving = True
 
-                # rectangle_number = int(connection_and_client_address_list[0].recv(1024).decode())
                 if not receive_thread.is_alive():
                     Game(
                         game_display,
@@ -401,6 +403,27 @@ def main():
 
                     is_data_receiving = False
                     is_server_turn = True
+
+                for my_event in pygame.event.get():
+                    # The end of the game (click on screen and game start again)
+                    if my_event.type == pygame.MOUSEBUTTONDOWN and is_end[0] == 2:
+                        # noinspection PyUnresolvedReferences
+                        connection_and_client_address_list[0].sendall(b'waiting for client')
+
+                        wait_thread = Thread(target=ReceiveDataString,
+                                             args=(connection_and_client_address_list[0], received_data))
+                        wait_thread.start()
+
+                        wait_for_another_player_click = True
+                        game_window_server = False
+
+                        # Break event loop
+                        break
+
+                    # Proper exit
+                    if my_event.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
 
         elif game_window_client:
             if is_first_time:
@@ -425,22 +448,22 @@ def main():
                             is_end
                         )
 
-                        is_server_turn = True
+                        if is_end[0] == 1:
+                            is_server_turn = True
 
                     # The end of the game (click on screen and game start again)
                     elif my_event.type == pygame.MOUSEBUTTONDOWN and is_end[0] == 2:
-                        # Fill the window with patterns
-                        FillWindow(game_display)
+                        client_socket.sendall(b'waiting for server')
 
-                        # Init variables
-                        state_table = [None for _ in range(9)]  # cross / zero
-                        # rectangle_number = None
-                        who_is_next = ["cross"]  # cross / zero
-                        is_end = [1]  # 1 - not the end, 2 - the end
+                        wait_thread = Thread(target=ReceiveDataString,
+                                             args=(client_socket, received_data))
+                        wait_thread.start()
 
-                        is_server_turn = True
+                        wait_for_another_player_click = True
+                        game_window_client = False
 
-                        pygame.display.update()
+                        # Break event loop
+                        break
 
                     # Proper exit
                     if my_event.type == QUIT:
@@ -448,7 +471,7 @@ def main():
                         sys.exit()
             else:
                 if not is_data_receiving:
-                    receive_thread = Thread(target=ReceiveData, args=(client_socket, received_data))
+                    receive_thread = Thread(target=ReceiveDataInt, args=(client_socket, received_data))
                     receive_thread.start()
 
                     is_data_receiving = True
@@ -465,6 +488,56 @@ def main():
 
                     is_data_receiving = False
                     is_server_turn = False
+
+                # Mandatory part to avoid not responding error
+                for my_event in pygame.event.get():
+                    # The end of the game (click on screen and game start again)
+                    if my_event.type == pygame.MOUSEBUTTONDOWN and is_end[0] == 2:
+                        client_socket.sendall(b'waiting for server')
+
+                        wait_thread = Thread(target=ReceiveDataString,
+                                             args=(client_socket, received_data))
+                        wait_thread.start()
+
+                        wait_for_another_player_click = True
+                        game_window_client = False
+
+                        # Break event loop
+                        break
+
+                    # Proper exit
+                    if my_event.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
+
+        elif wait_for_another_player_click:
+            if received_data[0] == "waiting for client":
+                game_window_client = True
+                is_first_time = True
+                is_data_receiving = False
+                is_server_turn = True
+                wait_for_another_player_click = False
+
+                state_table = [None for _ in range(9)]
+                who_is_next = ["cross"]
+                is_end = [1]
+
+            elif received_data[0] == "waiting for server":
+                game_window_server = True
+                is_first_time = True
+                is_data_receiving = False
+                is_server_turn = True
+                wait_for_another_player_click = False
+
+                state_table = [None for _ in range(9)]
+                who_is_next = ["cross"]
+                is_end = [1]
+
+            for my_event in pygame.event.get():
+                # Proper exit
+                if my_event.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
 
         pygame.display.update()
         fps_clock.tick(60)
