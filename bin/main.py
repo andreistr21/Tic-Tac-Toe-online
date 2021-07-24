@@ -184,7 +184,7 @@ def CheckForWin(state_table, who):
 
 
 def WinText(text, game_display):
-    my_font = pygame.font.SysFont("Comic Sans MS", 60)
+    my_font = pygame.font.SysFont("arial", 60)
     text = my_font.render(text, True, common.color_green, common.color_black)
     text_rect = text.get_rect()
     text_rect.center = (common.window_size_x // 2, common.window_size_y // 2)
@@ -247,11 +247,11 @@ def main():
     receive_thread = True
     wait_for_another_player_click = False
 
-    text_input = textInput.TextInput(font_size=20)
-    my_font = pygame.font.SysFont('Comic Sans MS', 15)
+    text_input = textInput.TextInput(font_size=20, font_family='arial')
+    my_font = pygame.font.SysFont('arial', 20)
     text_server_ip = my_font.render('Server IP:', False, common.color_black)
     # ToDo change IP to not local
-    text_your_server_ip = my_font.render(f'Your server IP: 127.0.0.1:{common.port}', False, common.color_black)
+    text_your_server_ip = my_font.render(f'Your server port: :{common.port}', False, common.color_black)
     text_waiting_for_another_player = my_font.render('Waiting for another player...', False, common.color_black)
 
     # Main loop
@@ -321,7 +321,7 @@ def main():
 
                 # Create the server
                 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                server_socket.bind(('127.0.0.1', common.port))
+                server_socket.bind(('', common.port))
                 server_socket.listen(1)
                 # Use threading to connect
                 thread = Thread(target=socket_accept,
@@ -404,22 +404,8 @@ def main():
                     is_data_receiving = False
                     is_server_turn = True
 
+                # Mandatory part to avoid not responding error
                 for my_event in pygame.event.get():
-                    # The end of the game (click on screen and game start again)
-                    if my_event.type == pygame.MOUSEBUTTONDOWN and is_end[0] == 2:
-                        # noinspection PyUnresolvedReferences
-                        connection_and_client_address_list[0].sendall(b'waiting for client')
-
-                        wait_thread = Thread(target=ReceiveDataString,
-                                             args=(connection_and_client_address_list[0], received_data))
-                        wait_thread.start()
-
-                        wait_for_another_player_click = True
-                        game_window_server = False
-
-                        # Break event loop
-                        break
-
                     # Proper exit
                     if my_event.type == QUIT:
                         pygame.quit()
@@ -491,20 +477,6 @@ def main():
 
                 # Mandatory part to avoid not responding error
                 for my_event in pygame.event.get():
-                    # The end of the game (click on screen and game start again)
-                    if my_event.type == pygame.MOUSEBUTTONDOWN and is_end[0] == 2:
-                        client_socket.sendall(b'waiting for server')
-
-                        wait_thread = Thread(target=ReceiveDataString,
-                                             args=(client_socket, received_data))
-                        wait_thread.start()
-
-                        wait_for_another_player_click = True
-                        game_window_client = False
-
-                        # Break event loop
-                        break
-
                     # Proper exit
                     if my_event.type == QUIT:
                         pygame.quit()
