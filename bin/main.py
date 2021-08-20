@@ -321,7 +321,6 @@ def main():
             for my_event in events:
                 if my_event.type == pygame.KEYDOWN:
                     if my_event.key == pygame.K_ESCAPE:
-                        # ToDo
                         chose_port_for_server_window = False
                         first_window_show = True
 
