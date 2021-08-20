@@ -231,27 +231,26 @@ def main():
     # Init variables
     first_window_show = True
     join_to_server_window = False
+    chose_port_for_server_window = False
     create_new_server_window = [False]
     game_window_client = False
     game_window_server = False
-    # text = None
     is_server_created = False
-    # server_socket = None
     client_socket = None
     is_server_turn = True
-    # connection = None
     is_first_time = True
     connection_and_client_address_list = [None, None]  # 0 - connection, 1 - client address
     received_data = [None]  # Stores data from threads
     is_data_receiving = False
     receive_thread = True
     wait_for_another_player_click = False
+    port_for_server = None
 
     text_input = textInput.TextInput(font_size=20, font_family='arial')
     my_font = pygame.font.SysFont('arial', 20)
-    text_server_ip = my_font.render('Server IP:', False, common.color_black)
-    # ToDo change IP to not local
-    text_your_server_ip = my_font.render(f'Your server port: :{common.port}', False, common.color_black)
+    text_server_ip = my_font.render('Write server IP and port:', False, common.color_black)
+    text_server_port = my_font.render('Write your server port:', False, common.color_black)
+    # text_your_server_port = my_font.render(f'Your server port: :{common.port}', False, common.color_black)
     text_waiting_for_another_player = my_font.render('Waiting for another player...', False, common.color_black)
 
     # Main loop
@@ -272,7 +271,7 @@ def main():
 
                     if button_create_new_server.collidepoint(pygame.mouse.get_pos()):
                         first_window_show = False
-                        create_new_server_window[0] = True
+                        chose_port_for_server_window = True
 
                 # Proper exit
                 if my_event.type == QUIT:
@@ -308,11 +307,41 @@ def main():
                 game_window_client = True
                 join_to_server_window = False
 
+        # Chose port for new server window
+        elif chose_port_for_server_window:
+            game_display.fill(common.color_light_gray)
+            # Show text
+            game_display.blit(text_server_port, (10, 0))
+            # Show input text
+            game_display.blit(text_input.get_surface(), (10, 30))
+
+            # Get all events and store in variable "events" fro use in two places
+            events = pygame.event.get()
+
+            for my_event in events:
+                if my_event.type == pygame.KEYDOWN:
+                    if my_event.key == pygame.K_ESCAPE:
+                        # ToDo
+                        chose_port_for_server_window = False
+                        first_window_show = True
+
+                # Proper exit
+                if my_event.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+            if text_input.update(events):
+                port_for_server = int(text_input.get_text())
+                create_new_server_window[0] = True
+                chose_port_for_server_window = False
+
+        # Create new server window
         # Create new server window
         elif create_new_server_window[0]:
             game_display.fill(common.color_light_gray)
             # Show text
-            game_display.blit(text_your_server_ip, (10, 0))
+            text_your_server_port = my_font.render(f'Your server port: :{port_for_server}', False, common.color_black)
+            game_display.blit(text_your_server_port, (10, 0))
             game_display.blit(text_waiting_for_another_player, (10, 30))
 
             if not is_server_created:
@@ -321,7 +350,7 @@ def main():
 
                 # Create the server
                 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                server_socket.bind(('', common.port))
+                server_socket.bind(('', port_for_server))
                 server_socket.listen(1)
                 # Use threading to connect
                 thread = Thread(target=socket_accept,
