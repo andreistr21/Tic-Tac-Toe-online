@@ -411,6 +411,11 @@ def main():
                         # Break event loop
                         break
 
+                    # Proper exit
+                    if my_event.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
+
             else:
                 if not is_data_receiving:
                     receive_thread = Thread(target=ReceiveDataInt,
